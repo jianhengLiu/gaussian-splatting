@@ -48,7 +48,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     ema_loss_for_log = 0.0
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
     first_iter += 1
-    for iteration in range(first_iter, opt.iterations + 1):        
+    for iteration in range(first_iter, opt.iterations + 1): 
+        # render synthetic view for gui
         if network_gui.conn == None:
             network_gui.try_connect()
         while network_gui.conn != None:
@@ -93,6 +94,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         with torch.no_grad():
             # Progress bar
+            # https://zhuanlan.zhihu.com/p/278403697
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             if iteration % 10 == 0:
                 progress_bar.set_postfix({"Loss": f"{ema_loss_for_log:.{7}f}"})
@@ -212,6 +214,7 @@ if __name__ == "__main__":
 
     # Start GUI server, configure and run training
     network_gui.init(args.ip, args.port)
+    # https://zhuanlan.zhihu.com/p/461202163
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
     training(lp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from)
 

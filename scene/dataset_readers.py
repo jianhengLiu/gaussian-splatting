@@ -42,6 +42,7 @@ class SceneInfo(NamedTuple):
     nerf_normalization: dict
     ply_path: str
 
+# get nerf scene training center(space) according to all poses
 def getNerfppNorm(cam_info):
     def get_center_and_diag(cam_centers):
         cam_centers = np.hstack(cam_centers)

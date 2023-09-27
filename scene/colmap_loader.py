@@ -122,6 +122,7 @@ def read_points3D_text(path):
 
     return xyzs, rgbs, errors
 
+# TODO：？为什么需要颜色？errors表示什么
 def read_points3D_binary(path_to_model_file):
     """
     see: src/base/reconstruction.cc

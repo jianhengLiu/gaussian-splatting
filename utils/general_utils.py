@@ -61,6 +61,7 @@ def get_expon_lr_func(
 
     return helper
 
+# only retain the uppper diagonal of a matrix
 def strip_lowerdiag(L):
     uncertainty = torch.zeros((L.shape[0], 6), dtype=torch.float, device="cuda")
 
@@ -75,6 +76,7 @@ def strip_lowerdiag(L):
 def strip_symmetric(sym):
     return strip_lowerdiag(sym)
 
+# un-normalized quaternion to rotation matrix
 def build_rotation(r):
     norm = torch.sqrt(r[:,0]*r[:,0] + r[:,1]*r[:,1] + r[:,2]*r[:,2] + r[:,3]*r[:,3])
 
@@ -98,6 +100,7 @@ def build_rotation(r):
     R[:, 2, 2] = 1 - 2 * (x*x + y*y)
     return R
 
+# build L = RS matrix from scaling and rotation
 def build_scaling_rotation(s, r):
     L = torch.zeros((s.shape[0], 3, 3), dtype=torch.float, device="cuda")
     R = build_rotation(r)
