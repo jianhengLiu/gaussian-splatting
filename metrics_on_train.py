@@ -70,7 +70,6 @@ def evaluate(model_paths, step = 20):
                 lpipss = []
 
                 for idx in tqdm(range(0,len(renders),step), desc="Metric evaluation progress"):
-                    print(idx)
                     render = renders[idx].cuda()
                     gt = gts[idx].cuda()
                     ssims.append(ssim(render, gt))
