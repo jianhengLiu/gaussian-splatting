@@ -95,11 +95,12 @@ def evaluate(model_paths):
             print("Unable to compute metrics for model", scene_dir)
 
 if __name__ == "__main__":
-    device = torch.device("cuda:0")
-    torch.cuda.set_device(device)
 
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")
     parser.add_argument('--model_paths', '-m', required=True, nargs="+", type=str, default=[])
+    parser.add_argument('--device', type=str, default="cuda:0")
     args = parser.parse_args()
+    device = torch.device(args.device)
+    torch.cuda.set_device(device)
     evaluate(args.model_paths)

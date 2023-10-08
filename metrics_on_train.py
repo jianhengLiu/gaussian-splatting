@@ -33,7 +33,7 @@ def readImages(renders_dir, gt_dir):
         image_names.append(fname)
     return renders, gts, image_names
 
-def evaluate(model_paths):
+def evaluate(model_paths, step = 20):
 
     full_dict = {}
     per_view_dict = {}
@@ -69,7 +69,8 @@ def evaluate(model_paths):
                 psnrs = []
                 lpipss = []
 
-                for idx in tqdm(range(len(renders)), desc="Metric evaluation progress"):
+                for idx in tqdm(range(0,len(renders),step), desc="Metric evaluation progress"):
+                    print(idx)
                     render = renders[idx].cuda()
                     gt = gts[idx].cuda()
                     ssims.append(ssim(render, gt))
@@ -96,11 +97,12 @@ def evaluate(model_paths):
             print("Unable to compute metrics for model", scene_dir)
 
 if __name__ == "__main__":
-    device = torch.device("cuda:2")
-    torch.cuda.set_device(device)
-
+    
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")
     parser.add_argument('--model_paths', '-m', required=True, nargs="+", type=str, default=[])
+    parser.add_argument('--device', type=str, default="cuda:0")
     args = parser.parse_args()
-    evaluate(args.model_paths)
+    device = torch.device(args.device)
+    torch.cuda.set_device(device)
+    evaluate(args.model_paths,20)
