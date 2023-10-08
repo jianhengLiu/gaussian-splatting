@@ -49,9 +49,10 @@ def evaluate(model_paths):
             full_dict_polytopeonly[scene_dir] = {}
             per_view_dict_polytopeonly[scene_dir] = {}
 
-            test_dir = Path(scene_dir) / "test"
+            # test_dir = Path(scene_dir) / "test"
+            train_dir = Path(scene_dir) / "train"
 
-            for method in os.listdir(test_dir):
+            for method in os.listdir(train_dir):
                 print("Method:", method)
 
                 full_dict[scene_dir][method] = {}
@@ -59,7 +60,7 @@ def evaluate(model_paths):
                 full_dict_polytopeonly[scene_dir][method] = {}
                 per_view_dict_polytopeonly[scene_dir][method] = {}
 
-                method_dir = test_dir / method
+                method_dir = train_dir / method
                 gt_dir = method_dir/ "gt"
                 renders_dir = method_dir / "renders"
                 renders, gts, image_names = readImages(renders_dir, gt_dir)
@@ -95,7 +96,7 @@ def evaluate(model_paths):
             print("Unable to compute metrics for model", scene_dir)
 
 if __name__ == "__main__":
-    device = torch.device("cuda:0")
+    device = torch.device("cuda:2")
     torch.cuda.set_device(device)
 
     # Set up command line argument parser
