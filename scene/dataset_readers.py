@@ -250,12 +250,23 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         try:
             xyz, rgb, _ = read_points3D_binary(bin_path)
         except:
-            xyz, rgb, _ = read_points3D_text(txt_path)
+            try:
+                xyz, rgb, _ = read_points3D_text(txt_path)
+            except:
+                # Since this data set has no colmap data, we start with random points
+                num_pts = 100000
+                print(f"Generating random point cloud ({num_pts})...")
+
+                # We create random points inside the bounds of the synthetic Blender scenes
+                xyz = np.random.random((num_pts, 3)) * 2 * nerf_normalization["radius"] - nerf_normalization["radius"] - nerf_normalization["translate"]
+                shs = np.random.random((num_pts, 3)) / 255.0
+                rgb = SH2RGB(shs) * 255
+                
         storePly(ply_path, xyz, rgb)
     try:
         pcd = fetchPly(ply_path)
     except:
-        pcd = None
+        pcd = None # TODO:? what if None? will init randomly?
 
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_cam_infos,

@@ -23,21 +23,35 @@ parser.add_argument("--camera", default="OPENCV", type=str)
 parser.add_argument("--colmap_executable", default="", type=str)
 parser.add_argument("--resize", action="store_true")
 parser.add_argument("--magick_executable", default="", type=str)
+parser.add_argument("--camera_params", type=str, help="camera parameters ('fx,fy,cx,cy,k1,k2,p1,p2')")
 args = parser.parse_args()
 colmap_command = '"{}"'.format(args.colmap_executable) if len(args.colmap_executable) > 0 else "colmap"
 magick_command = '"{}"'.format(args.magick_executable) if len(args.magick_executable) > 0 else "magick"
 use_gpu = 1 if not args.no_gpu else 0
 
+# https://colmap.github.io/cli.html
+# https://www.cnblogs.com/phillee/p/14335034.html
 if not args.skip_matching:
     os.makedirs(args.source_path + "/distorted/sparse", exist_ok=True)
 
     ## Feature extraction
-    feat_extracton_cmd = colmap_command + " feature_extractor "\
-        "--database_path " + args.source_path + "/distorted/database.db \
-        --image_path " + args.source_path + "/input \
-        --ImageReader.single_camera 1 \
-        --ImageReader.camera_model " + args.camera + " \
-        --SiftExtraction.use_gpu " + str(use_gpu)
+    if args.camera_params:
+        # https://www.cnblogs.com/phillee/p/14335034.html
+        # https://github.com/colmap/colmap/blob/ff8842e7d9e985bd0dd87169f61d5aaeb309ab32/src/colmap/sensor/models.h#L239C7-L239C7
+        feat_extracton_cmd = colmap_command + " feature_extractor "\
+        "--database_path " + args.source_path + "/distorted/database.db "\
+        "--image_path " + args.source_path + "/input "\
+        "--ImageReader.single_camera 1 "\
+        "--ImageReader.camera_model " + args.camera + " "\
+        "--ImageReader.camera_params " + "\"" +args.camera_params + "\"" + " "\
+        "--SiftExtraction.use_gpu " + str(use_gpu)
+    else:
+        feat_extracton_cmd = colmap_command + " feature_extractor "\
+        "--database_path " + args.source_path + "/distorted/database.db "\
+        "--image_path " + args.source_path + "/input "\
+        "--ImageReader.single_camera 1 "\
+        "--ImageReader.camera_model " + args.camera + " "\
+        "--SiftExtraction.use_gpu " + str(use_gpu)
     exit_code = os.system(feat_extracton_cmd)
     if exit_code != 0:
         logging.error(f"Feature extraction failed with code {exit_code}. Exiting.")
@@ -53,13 +67,27 @@ if not args.skip_matching:
         exit(exit_code)
 
     ### Bundle adjustment
-    # The default Mapper tolerance is unnecessarily large,
-    # decreasing it speeds up bundle adjustment steps.
-    mapper_cmd = (colmap_command + " mapper \
-        --database_path " + args.source_path + "/distorted/database.db \
-        --image_path "  + args.source_path + "/input \
-        --output_path "  + args.source_path + "/distorted/sparse \
-        --Mapper.ba_global_function_tolerance=0.000001")
+    
+    if args.camera_params:
+        ## Bundle adjustment with no refinement of intrinsics
+        # https://github.com/colmap/colmap/issues/1919
+        mapper_cmd = (colmap_command + " mapper \
+            --database_path " + args.source_path + "/distorted/database.db \
+            --image_path " + args.source_path + "/input \
+            --output_path " + args.source_path + "/distorted/sparse \
+            --Mapper.ba_global_function_tolerance=0.000001 \
+            --Mapper.ba_refine_focal_length=false \
+            --Mapper.ba_refine_principal_point=false \
+            --Mapper.ba_refine_extra_params=false")
+    else:
+        # The default Mapper tolerance is unnecessarily large,
+        # decreasing it speeds up bundle adjustment steps.
+        mapper_cmd = (colmap_command + " mapper \
+            --database_path " + args.source_path + "/distorted/database.db \
+            --image_path "  + args.source_path + "/input \
+            --output_path "  + args.source_path + "/distorted/sparse \
+            --Mapper.ba_global_function_tolerance=0.000001")
+        
     exit_code = os.system(mapper_cmd)
     if exit_code != 0:
         logging.error(f"Mapper failed with code {exit_code}. Exiting.")
