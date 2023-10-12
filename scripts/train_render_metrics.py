@@ -15,9 +15,17 @@ parser.add_argument('--opacity_reset_interval', type=int, default=3_000)
 
 args, _ = parser.parse_known_args()
 
-os.system("python train.py --data_device "+ args.data_device +" -s " + args.source_path + " -m " + args.model_paths + " --ip " + args.ip + " --device " + args.device + " --densify_from_iter " + str(args.densify_from_iter) + " --iterations " + str(args.iterations) + " --opacity_reset_interval " + str(args.opacity_reset_interval))
+exit_code = os.system("python train.py --data_device "+ args.data_device +" -s " + args.source_path + " -m " + args.model_paths + " --ip " + args.ip + " --device " + args.device + " --densify_from_iter " + str(args.densify_from_iter) + " --iterations " + str(args.iterations) + " --opacity_reset_interval " + str(args.opacity_reset_interval) + " --eval")
  
+if exit_code != 0:
+    exit(exit_code)
 
-os.system("python render.py -m " + args.model_paths + " --device " + args.device)
+exit_code = os.system("python render.py -m " + args.model_paths + " --device " + args.device)
  
-os.system("python metrics_on_train.py -m " + args.model_paths + " --device " + args.device)
+if exit_code != 0:
+    exit(exit_code)
+    
+# os.system("python metrics_on_train.py -m " + args.model_paths + " --device " + args.device)
+exit_code = os.system("python metrics.py -m " + args.model_paths + " --device " + args.device)
+if exit_code != 0:
+    exit(exit_code)

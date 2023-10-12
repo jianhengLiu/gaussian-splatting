@@ -33,7 +33,7 @@ def readImages(renders_dir, gt_dir):
         image_names.append(fname)
     return renders, gts, image_names
 
-def evaluate(model_paths, step = 20):
+def evaluate(model_paths, step = 1):
 
     full_dict = {}
     per_view_dict = {}
@@ -104,4 +104,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     device = torch.device(args.device)
     torch.cuda.set_device(device)
-    evaluate(args.model_paths,20)
+    evaluate(args.model_paths,1)
