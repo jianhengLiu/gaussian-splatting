@@ -9,6 +9,8 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import cv2
+import numpy as np
 import torch
 from scene import Scene
 import os
@@ -23,16 +25,42 @@ from gaussian_renderer import GaussianModel
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
+    render_depth_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders_depth")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
 
     makedirs(render_path, exist_ok=True)
+    makedirs(render_depth_path, exist_ok=True)
     makedirs(gts_path, exist_ok=True)
 
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
-        rendering = render(view, gaussians, pipeline, background)["render"]
+        rendering = render(view, gaussians, pipeline, background)
+        # torch.float32, [3, H, W]
+        render_color = rendering["render"]
+        render_depth = rendering["render_depth"]
+        
         gt = view.original_image[0:3, :, :]
-        torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
+        torchvision.utils.save_image(render_color, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
+        
+        # transform render_depth to visiable depth
+        # render_depth = render_depth / render_depth.max()
+        render_depth = render_depth / 10
+        # 5 preset max vis depth
+        # render_depth = render_depth / 5
+        # render_depth = render_depth * 255
+        # render_depth = cv2.applyColorMap(render_depth.squeeze().cpu().numpy().astype(np.uint8), cv2.COLORMAP_JET)
+        # # save
+        # cv2.imwrite(os.path.join(render_depth_path, '{0:05d}'.format(idx) + ".png"), render_depth)
+        
+        torchvision.utils.save_image(render_depth, os.path.join(render_depth_path, '{0:05d}'.format(idx) + ".png"))
+        
         torchvision.utils.save_image(gt, os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))
+        
+    # png2viewo_cmd = "ffmpeg -y -framerate 5 -i {}/%05d.png -c:v libx264 {}/video.mp4".format(render_path, render_path)
+    # os.system(png2viewo_cmd)
+    # png2viewo_cmd = "ffmpeg -y -framerate 5 -i {}/%05d.png -c:v libx264 {}/video_depth.mp4".format(render_depth_path, render_depth_path)
+    # os.system(png2viewo_cmd)
+    # png2viewo_cmd = "ffmpeg -y -framerate 5 -i {}/%05d.png -c:v libx264 {}/video_gt.mp4".format(gts_path, gts_path)
+    # os.system(png2viewo_cmd)
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
     with torch.no_grad():
