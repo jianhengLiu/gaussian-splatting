@@ -138,7 +138,7 @@ class GaussianModel:
 
         opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
         
-        self.fused_point_cloud = fused_point_cloud.clone()
+        self.fused_point_cloud = torch.cat([fused_point_cloud,torch.ones(fused_point_cloud.size(0),1).cuda()],1)
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))

@@ -85,23 +85,24 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         image, depth_image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["render_depth"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         
         # reproject pcd to image
-        # transformPoint4x4
-        points_torch = gaussians.fused_point_cloud[:, :3]
-        points_homo = torch.cat([points_torch,torch.ones(points_torch.size(0),1).cuda()],1)
-        p_hom = points_homo.float() @ viewpoint_cam.full_proj_transform
+        
+        p_view = gaussians.fused_point_cloud @ viewpoint_cam.world_view_transform 
+        
+        mask = p_view[:, 2]>0       
+        
+        p_hom = gaussians.fused_point_cloud.float()[mask] @ viewpoint_cam.full_proj_transform
         p_w = 1.0 / (p_hom[:, 3] + 0.0000001)
         p_proj = p_hom[:, :3] * p_w[:, None]
         
-        p_view = points_homo @ viewpoint_cam.world_view_transform 
         reprojected_points = torch.column_stack(
             (
                 (p_proj[:, 0]* viewpoint_cam.image_width-1.0)*0.5 + viewpoint_cam.cx,
                 (p_proj[:, 1]* viewpoint_cam.image_height-1.0)*0.5+ viewpoint_cam.cy,
-                p_view[:, 2],
+                p_view[:, 2][mask],
             )
         )
         # mask points that out of range
-        mask = (reprojected_points[:,0]>0) & (reprojected_points[:,0]<viewpoint_cam.image_width) &  (reprojected_points[:,1]>0) & (reprojected_points[:,1]<viewpoint_cam.image_height) & (reprojected_points[:,2]>0)
+        mask = (reprojected_points[:,0]>0) & (reprojected_points[:,0]<viewpoint_cam.image_width) &  (reprojected_points[:,1]>0) & (reprojected_points[:,1]<viewpoint_cam.image_height)
         reprojected_points = reprojected_points[mask]
 
         # Loss
