@@ -14,7 +14,7 @@
    ```
     wherein, 
     - images.txt: `IMAGE_ID QW QX QY QZ TX TY TZ`
-    - cameras.txt: `CAMERA_ID MODEL WIDTH HEIGHT fx fy, cx cy k1 k2 p1 p2`
+    - cameras.txt: `CAMERA_ID MODEL WIDTH HEIGHT fx fy cx cy k1 k2 p1 p2`
   
 2. undistort images
    ```

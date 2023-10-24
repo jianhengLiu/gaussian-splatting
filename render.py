@@ -44,8 +44,6 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         # transform render_depth to visiable depth
         # render_depth = render_depth / render_depth.max()
         render_depth = render_depth / 10
-        # 5 preset max vis depth
-        # render_depth = render_depth / 5
         # render_depth = render_depth * 255
         # render_depth = cv2.applyColorMap(render_depth.squeeze().cpu().numpy().astype(np.uint8), cv2.COLORMAP_JET)
         # # save

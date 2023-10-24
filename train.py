@@ -10,6 +10,7 @@
 #
 
 import os
+import cv2
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, ssim, s3im
@@ -83,37 +84,47 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             pipe.debug = True
         render_pkg = render(viewpoint_cam, gaussians, pipe, background)
         image, depth_image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["render_depth"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
-        
-        # reproject pcd to image
-        
-        p_view = gaussians.fused_point_cloud @ viewpoint_cam.world_view_transform 
-        
-        mask = p_view[:, 2]>0       
-        
-        p_hom = gaussians.fused_point_cloud.float()[mask] @ viewpoint_cam.full_proj_transform
-        p_w = 1.0 / (p_hom[:, 3] + 0.0000001)
-        p_proj = p_hom[:, :3] * p_w[:, None]
-        
-        reprojected_points = torch.column_stack(
-            (
-                (p_proj[:, 0]* viewpoint_cam.image_width-1.0)*0.5 + viewpoint_cam.cx,
-                (p_proj[:, 1]* viewpoint_cam.image_height-1.0)*0.5+ viewpoint_cam.cy,
-                p_view[:, 2][mask],
-            )
-        )
-        # mask points that out of range
-        mask = (reprojected_points[:,0]>0) & (reprojected_points[:,0]<viewpoint_cam.image_width) &  (reprojected_points[:,1]>0) & (reprojected_points[:,1]<viewpoint_cam.image_height)
-        reprojected_points = reprojected_points[mask]
-
         # Loss
         # Color Loss
         gt_image = viewpoint_cam.original_image.cuda()
         Ll1 = l1_loss(image, gt_image)
         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
         # loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - s3im(image, gt_image))
-        # Depth Loss
-        valid_depth = depth_image[:,reprojected_points[:,1].long(),reprojected_points[:,0].long()]
-        depth_loss = l1_loss(valid_depth, reprojected_points[:,2])
+        
+        # # Depth Loss
+        # reproject pcd to image
+        p_view = gaussians.fused_point_cloud @ viewpoint_cam.world_view_transform 
+        
+        p_hom = gaussians.fused_point_cloud.float() @ viewpoint_cam.full_proj_transform
+        p_w = 1.0 / (p_hom[:, 3] + 0.0000001)
+        p_proj = p_hom[:, :3] * p_w[:, None]
+        
+        gt_depth = torch.column_stack(
+            (
+                (p_proj[:, 0]* viewpoint_cam.image_width-1.0)*0.5 + viewpoint_cam.cx,
+                (p_proj[:, 1]* viewpoint_cam.image_height-1.0)*0.5+ viewpoint_cam.cy,
+                p_view[:, 2]
+            )
+        )
+        # mask points that out of range
+        mask = (gt_depth[:,0]>0) & (gt_depth[:,0]<viewpoint_cam.image_width) &  (gt_depth[:,1]>0) & (gt_depth[:,1]<viewpoint_cam.image_height) & (p_view[:, 2] > 0) & (p_view[:, 2] < 10)
+        gt_depth = gt_depth[mask]
+        
+        # imshow depth image
+        # gt_depth_image = torch.full_like(depth_image,torch.inf)
+        # for u, v, z in gt_depth:
+        #     # 仅当当前点的深度小于深度图中存储的深度时更新
+        #     if z < gt_depth_image[0,int(v), int(u)]:
+        #         gt_depth_image[0,int(v), int(u)] = z
+        gt_depth_image = torch.zeros_like(depth_image)
+        gt_depth_image[:,gt_depth[:,1].long(),gt_depth[:,0].long()] = gt_depth[:,2]
+        combined = torch.hstack((depth_image, gt_depth_image)) / 10.0
+        cv2.imshow("depth",combined.detach().permute(1,2,0).cpu().numpy())
+        cv2.waitKey(0)
+        
+        valid_depth = depth_image[:,gt_depth[:,1].long(),gt_depth[:,0].long()]
+        
+        depth_loss = l1_loss(valid_depth, gt_depth[:,2])
         loss += opt.lambda_depth * depth_loss
         
         loss.backward()

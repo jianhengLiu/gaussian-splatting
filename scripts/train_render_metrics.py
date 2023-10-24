@@ -10,12 +10,12 @@ parser.add_argument('--device', type=str, default="cuda:0")
 parser.add_argument('--densify_from_iter', type=int, default=500)
 parser.add_argument('--iterations', type=int, default=30000)
 parser.add_argument('--opacity_reset_interval', type=int, default=3_000)
-
+parser.add_argument('--densification_interval', type=int, default=100)
 
 
 args, _ = parser.parse_known_args()
 
-exit_code = os.system("python train.py --data_device "+ args.data_device +" -s " + args.source_path + " -m " + args.model_paths + " --ip " + args.ip + " --device " + args.device + " --densify_from_iter " + str(args.densify_from_iter) + " --iterations " + str(args.iterations) + " --opacity_reset_interval " + str(args.opacity_reset_interval) + " --eval")
+exit_code = os.system("python train.py --data_device "+ args.data_device +" -s " + args.source_path + " -m " + args.model_paths + " --ip " + args.ip + " --device " + args.device + " --densify_from_iter " + str(args.densify_from_iter) + " --iterations " + str(args.iterations) + " --opacity_reset_interval " + str(args.opacity_reset_interval) + " --eval" + " --densification_interval " + str(args.densification_interval))
  
 if exit_code != 0:
     exit(exit_code)
