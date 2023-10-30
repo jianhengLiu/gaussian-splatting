@@ -10,6 +10,7 @@
 #
 
 
+from tqdm import tqdm
 import trimesh
 import cv2
 import numpy as np
@@ -786,7 +787,8 @@ def extract_mesh(
         Z = torch.linspace(-1, 1, resolution).split(split_size)
 
         # loop blocks (assume max size of gaussian is small than relax_ratio * block_size !!!)
-        for xi, xs in enumerate(X):
+
+        for xi, xs in enumerate(tqdm(X)):
             for yi, ys in enumerate(Y):
                 for zi, zs in enumerate(Z):
                     xx, yy, zz = torch.meshgrid(xs, ys, zs, indexing="ij")
@@ -818,17 +820,17 @@ def extract_mesh(
                     )  # [M, L, 6]
 
                     # batch on gaussian to avoid OOM
-                    batch_g = 4096
+                    batch_g = 1024
                     val = 0
                     for start in range(0, g_covs.shape[1], batch_g):
                         end = min(start + batch_g, g_covs.shape[1])
                         w = gaussian_3d_coeff(
-                            g_pts[:, start:end].reshape(-1, 3),
-                            g_covs[:, start:end].reshape(-1, 6),
+                            g_pts[:, start:end].cuda().reshape(-1, 3),
+                            g_covs[:, start:end].cuda().reshape(-1, 6),
                         ).reshape(
                             pts.shape[0], -1
                         )  # [M, l]
-                        val += (mask_opas[:, start:end] * w).sum(-1)
+                        val += (mask_opas[:, start:end].cuda() * w).sum(-1).cpu()
 
                     # kiui.lo(val, mask_opas, w)
 
