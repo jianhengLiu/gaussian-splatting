@@ -707,9 +707,13 @@ class Mesh:
 
 
 # https://github.com/dreamgaussian/dreamgaussian
-def extract_mesh(gaussians, density_thresh, resolution=512, decimate_target=1e5):
+def extract_mesh(
+    gaussians, density_thresh, resolution=512, decimate_target=1e5, device="cuda"
+):
     @torch.no_grad()
-    def extract_fields(gaussians, resolution=128, num_blocks=16, relax_ratio=1.5):
+    def extract_fields(
+        gaussians, resolution=128, num_blocks=16, relax_ratio=1.5, device="cuda"
+    ):
         def gaussian_3d_coeff(xyzs, covs):
             # xyzs: [N, 3]
             # covs: [N, 6]
@@ -756,9 +760,9 @@ def extract_mesh(gaussians, density_thresh, resolution=512, decimate_target=1e5)
         # pre-filter low opacity gaussians to save computation
         mask = (opacities > 0.005).squeeze(1)
 
-        opacities = opacities[mask].cpu()
-        xyzs = gaussians.get_xyz[mask].cpu()
-        stds = gaussians.get_scaling[mask].cpu()
+        opacities = opacities[mask].to(device)
+        xyzs = gaussians.get_xyz[mask].to(device)
+        stds = gaussians.get_scaling[mask].to(device)
 
         # normalize to ~ [-1, 1]
         mn, mx = xyzs.amin(0), xyzs.amax(0)
@@ -768,12 +772,15 @@ def extract_mesh(gaussians, density_thresh, resolution=512, decimate_target=1e5)
         xyzs = (xyzs - center) * scale
         stds = stds * scale
 
-        covs = gaussians.covariance_activation(stds, 1, gaussians._rotation[mask]).cpu()
+        covs = gaussians.covariance_activation(
+            stds, 1, gaussians._rotation[mask].to(device)
+        ).to(device)
 
         # tile
         device = opacities.device
         occ = torch.zeros([resolution] * 3, dtype=torch.float32, device=device)
 
+        # every block's resolution = split_size
         X = torch.linspace(-1, 1, resolution).split(split_size)
         Y = torch.linspace(-1, 1, resolution).split(split_size)
         Z = torch.linspace(-1, 1, resolution).split(split_size)
@@ -811,7 +818,7 @@ def extract_mesh(gaussians, density_thresh, resolution=512, decimate_target=1e5)
                     )  # [M, L, 6]
 
                     # batch on gaussian to avoid OOM
-                    batch_g = 1024
+                    batch_g = 4096
                     val = 0
                     for start in range(0, g_covs.shape[1], batch_g):
                         end = min(start + batch_g, g_covs.shape[1])
@@ -944,7 +951,7 @@ def extract_mesh(gaussians, density_thresh, resolution=512, decimate_target=1e5)
 
         return verts, faces
 
-    occ, center, scale = extract_fields(gaussians, resolution)
+    occ, center, scale = extract_fields(gaussians, resolution, device=device)
     print(f"occ: {occ.shape}")
 
     import mcubes
@@ -959,11 +966,11 @@ def extract_mesh(gaussians, density_thresh, resolution=512, decimate_target=1e5)
 
     print(f"marching cubes: {vertices.shape} {triangles.shape}")
 
-    vertices, triangles = clean_mesh(
-        vertices, triangles, remesh=True, remesh_size=0.015
-    )
-    if decimate_target > 0 and triangles.shape[0] > decimate_target:
-        vertices, triangles = decimate_mesh(vertices, triangles, decimate_target)
+    # vertices, triangles = clean_mesh(
+    #     vertices, triangles, remesh=True, remesh_size=0.015
+    # )
+    # if decimate_target > 0 and triangles.shape[0] > decimate_target:
+    #     vertices, triangles = decimate_mesh(vertices, triangles, decimate_target)
 
     v = torch.from_numpy(vertices.astype(np.float32)).contiguous().cuda()
     f = torch.from_numpy(triangles.astype(np.int32)).contiguous().cuda()
@@ -981,15 +988,16 @@ def meshing(
     skip_test: bool,
     mesh_shape="./outs/gs_shape.obj",
     density_thresh=1,
+    device="cuda",
 ):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
-        background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+        background = torch.tensor(bg_color, dtype=torch.float32, device=device)
 
-        mesh = extract_mesh(scene.gaussians, density_thresh)
+        mesh = extract_mesh(scene.gaussians, density_thresh, device=device)
         os.makedirs(os.path.dirname(mesh_shape), exist_ok=True)
         mesh.write(mesh_shape)
 
@@ -1016,4 +1024,5 @@ if __name__ == "__main__":
         pipeline.extract(args),
         args.skip_train,
         args.skip_test,
+        device=args.data_device,
     )

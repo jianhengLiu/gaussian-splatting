@@ -7,6 +7,11 @@ wget https://cvg-data.inf.ethz.ch/nice-slam/data/Replica.zip
 unzip Replica.zip
 ```
 
+## Thanks
+- 3D Gaussian Splatting
+- Neuralangelo
+- DreamGaussian
+
 # 3D Gaussian Splatting for Real-Time Radiance Field Rendering
 Bernhard Kerbl*, Georgios Kopanas*, Thomas Leimkühler, George Drettakis (* indicates equal contribution)<br>
 | [Webpage](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) | [Full Paper](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_high.pdf) | [Video](https://youtu.be/T_kXY43VZnk) | [Other GRAPHDECO Publications](http://www-sop.inria.fr/reves/publis/gdindex.php) | [FUNGRAPH project page](https://fungraph.inria.fr) |<br>
