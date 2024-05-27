@@ -39,6 +39,7 @@ class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
     train_cameras: list
     test_cameras: list
+    eval_cameras: list
     nerf_normalization: dict
     ply_path: str
 
@@ -154,13 +155,13 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         reading_dir = "eval_images"
         eval_cam_infos_unsorted = readColmapCameras(cam_extrinsics=eval_cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
         eval_cam_infos = sorted(eval_cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+        eval_cam_infos = [c for idx, c in enumerate(eval_cam_infos)]
+    else:
+        eval_cam_infos = []
 
     if eval:
         train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
-        if has_eval:
-            test_cam_infos = [c for idx, c in enumerate(eval_cam_infos)]
-        else:
-            test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
+        test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
     else:
         train_cam_infos = cam_infos
         test_cam_infos = []
@@ -185,6 +186,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_cam_infos,
                            test_cameras=test_cam_infos,
+                           eval_cameras=eval_cam_infos,
                            nerf_normalization=nerf_normalization,
                            ply_path=ply_path)
     return scene_info
